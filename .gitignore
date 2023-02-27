@@ -4,3 +4,4 @@ data/
 lightning_logs/
 wandb/
 env/
+__pycache__/
