@@ -1,4 +1,4 @@
-from beattrack.model import BeatNetWrapper
+from beattrack.model import BeatNet
 from beattrack.datasets import BallroomDataset, BallroomDatamodule
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.model_summary import ModelSummary
@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 def main():
     pl.seed_everything(123)
-    dataset = BallroomDataset(root="data/ballroom", skip_render=True)
+    dataset = BallroomDataset(root="data/ballroom", render=False)
     datamodule = BallroomDatamodule(
         dataset,
         root="data/ballroom",
@@ -18,10 +18,20 @@ def main():
     )
 
     logger = WandbLogger(project="beattrack", entity="mattricesound", save_dir=".")
-
-    model = BeatNetWrapper()
+    callbacks = []
+    model_checkpoint = pl.callbacks.ModelCheckpoint(
+        monitor="valid_loss",
+        save_top_k=1,
+        save_last=True,
+        mode="min",
+        verbose=False,
+        dirpath="./ckpts2/",
+        filename="{epoch:02d}-{valid_loss:.3f}",
+    )
+    callbacks.append(model_checkpoint)
+    model = BeatNet()
     trainer = pl.Trainer(
-        max_epochs=10, logger=logger, log_every_n_steps=1, default_root_dir="./ckpts"
+        max_epochs=10, logger=logger, log_every_n_steps=1, callbacks=callbacks
     )
     summary = ModelSummary(model)
     print(summary)

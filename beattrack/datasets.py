@@ -19,7 +19,7 @@ data_length = 30 * sample_rate  # 30 seconds of audio
 
 
 class BallroomDataset(Dataset):
-    def __init__(self, root: str, skip_render: bool = False):
+    def __init__(self, root: str, render: bool = True):
         super().__init__()
         self.root = Path(root)
         self.audio_files = list(self.root.glob("**/*.wav"))
@@ -35,9 +35,9 @@ class BallroomDataset(Dataset):
             n_mels=n_mels,
         )
 
-        total = 0
-        if skip_render:
+        if not render:
             return
+        total = 0
         for i, f in enumerate(tqdm(self.audio_files)):
             audio, sr = torchaudio.load(f)
             # Pad or trim to 30 seconds

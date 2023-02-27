@@ -5,21 +5,25 @@ from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 
 
-class BeatNetWrapper(pl.LightningModule):
+class BeatNet(pl.LightningModule):
     def __init__(
         self,
     ):
         super().__init__()
-        self.model = BeatNet()
+        self.ConvBlock = ConvBlock()
+        self.TCN = TCN(n_blocks=11)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.ConvBlock(x)  # b, 16, conv, 1
+        # Remove last dimension
+        x = x.view(-1, x.shape[1], x.shape[2])
+        x = self.TCN(x)
+        x = self.sigmoid(x)
+        return x
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
-            list(self.model.parameters()),
-            lr=0.001,
-            betas=(0.9, 0.999),
-            eps=1e-08,
-            weight_decay=0.01,
-        )
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
     def training_step(self, batch, batch_idx):
@@ -36,27 +40,15 @@ class BeatNetWrapper(pl.LightningModule):
 
     def common_step(self, batch, batch_idx, mode: str = "train"):
         specs, labels = batch
-        preds = self.model(specs)
+        import pdb
+
+        pdb.set_trace()
+        preds = self(specs)
         loss = F.binary_cross_entropy(preds.squeeze(1), labels.float())
+
         self.log(f"{mode}_loss", loss)
 
         return loss
-
-
-class BeatNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.ConvBlock = ConvBlock()
-        self.TCN = TCN(n_blocks=11)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        x = self.ConvBlock(x)  # b, 16, conv, 1
-        # Remove last dimension
-        x = x.view(-1, x.shape[1], x.shape[2])
-        x = self.TCN(x)
-        x = self.sigmoid(x)
-        return x
 
 
 class ConvBlock(nn.Module):
@@ -120,7 +112,6 @@ class TCN(nn.Module):
         self.conv1 = nn.Conv1d(in_channels=16, out_channels=16, kernel_size=1)
         self.activation2 = nn.ELU()
         self.conv2 = nn.Conv1d(in_channels=16, out_channels=1, kernel_size=1)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         # x = self.input_conv(x)
@@ -130,7 +121,6 @@ class TCN(nn.Module):
         x = self.conv1(x)
         x = self.activation2(x)
         x = self.conv2(x)
-        x = self.softmax(x)
         return x
 
 
@@ -144,28 +134,32 @@ class Resblock(nn.Module):
         num_filters: int,
     ):
         super().__init__()
-        self.dialated_conv1 = nn.Conv1d(
-            in_channels=in_channels,
-            out_channels=num_filters,
-            kernel_size=kernel_size,
-            padding=kernel_size // 2 * dilation,
-            dilation=dilation,
+        self.dialated_conv1 = weight_norm(
+            nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=num_filters,
+                kernel_size=kernel_size,
+                padding=kernel_size // 2 * dilation,
+                dilation=dilation,
+            )
         )
         self.elu1 = nn.ELU()
         self.dropout1 = nn.Dropout(p=dropout)
-        self.dialated_conv2 = nn.Conv1d(
-            in_channels=num_filters,
-            out_channels=num_filters,
-            kernel_size=kernel_size,
-            dilation=dilation,
-            padding=kernel_size // 2 * dilation,
+        self.dialated_conv2 = weight_norm(
+            nn.Conv1d(
+                in_channels=num_filters,
+                out_channels=num_filters,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                padding=kernel_size // 2 * dilation,
+            )
         )
         self.elu2 = nn.ELU()
         self.dropout2 = nn.Dropout(p=dropout)
         self.skip = nn.Conv1d(
             in_channels=in_channels, out_channels=num_filters, kernel_size=1
         )
-        # self._initialise_weights(self.dialated_conv1, self.dialated_conv2, self.skip)
+        self._initialise_weights(self.dialated_conv1, self.dialated_conv2, self.skip)
 
     def forward(self, x):
         y = self.dialated_conv1(x)
