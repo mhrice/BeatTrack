@@ -13,6 +13,7 @@ class BeatNet(pl.LightningModule):
         self.ConvBlock = ConvBlock()
         self.TCN = TCN(n_blocks=11)
         self.sigmoid = nn.Sigmoid()
+        self.loss = nn.BCELoss()
 
     def forward(self, x):
         x = self.ConvBlock(x)  # b, 16, conv, 1
@@ -24,7 +25,16 @@ class BeatNet(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.2, patience=5, verbose=True
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "valid_loss",
+            },
+        }
 
     def training_step(self, batch, batch_idx):
         loss = self.common_step(batch, batch_idx, mode="train")
@@ -40,15 +50,25 @@ class BeatNet(pl.LightningModule):
 
     def common_step(self, batch, batch_idx, mode: str = "train"):
         specs, labels = batch
-        import pdb
-
-        pdb.set_trace()
         preds = self(specs)
-        loss = F.binary_cross_entropy(preds.squeeze(1), labels.float())
-
+        loss = self.loss(preds.squeeze(1), labels)
         self.log(f"{mode}_loss", loss)
 
         return loss
+
+
+def mean_false_error(preds, labels):
+    loss = 0
+    for pred, label in zip(preds.squeeze(1), labels):
+        positive = (label == 1).nonzero()
+        negative = (label == 0).nonzero()
+        positive_pred = pred[positive].squeeze(1)
+        positive_label = label[positive].squeeze(1)
+        positive_loss = F.binary_cross_entropy(positive_pred, positive_label.float())
+        negative_pred = pred[negative].squeeze(1)
+        negative_label = label[negative].squeeze(1)
+        negative_loss = F.binary_cross_entropy(negative_pred, negative_label.float())
+        loss += positive_loss / len(positive) + negative_loss / len(negative)
 
 
 class ConvBlock(nn.Module):
@@ -62,6 +82,8 @@ class ConvBlock(nn.Module):
             kernel_size=(3, 3),
             padding=(1, 0),
         )
+        self.elu1 = nn.ELU()
+        self.dropout1 = nn.Dropout(p=0.1)
         self.maxpool1 = nn.MaxPool2d(kernel_size=(1, 3))
         self.conv2 = nn.Conv2d(
             in_channels=16,
@@ -69,23 +91,29 @@ class ConvBlock(nn.Module):
             kernel_size=(3, 3),
             padding=(1, 0),
         )
+        self.elu2 = nn.ELU()
+        self.dropout2 = nn.Dropout(p=0.1)
         self.maxpool2 = nn.MaxPool2d(kernel_size=(1, 3))
         self.conv3 = nn.Conv2d(
             in_channels=16,
             out_channels=16,
             kernel_size=(1, 8),
         )
-        self.elu = nn.ELU()
-        self.dropout = nn.Dropout(p=0.1)
+        self.elu3 = nn.ELU()
+        self.dropout3 = nn.Dropout(p=0.1)
 
     def forward(self, x):
         x = self.conv1(x)
+        x = self.elu1(x)
+        x = self.dropout1(x)
         x = self.maxpool1(x)
         x = self.conv2(x)
+        x = self.elu2(x)
+        x = self.dropout2(x)
         x = self.maxpool2(x)
         x = self.conv3(x)
-        x = self.elu(x)
-        x = self.dropout(x)
+        x = self.elu3(x)
+        x = self.dropout3(x)
         return x
 
 

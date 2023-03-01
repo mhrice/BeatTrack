@@ -1,41 +1,36 @@
 from beattrack.model import BeatNet
 from beattrack.datasets import BallroomDataset, BallroomDatamodule
+from beattrack.callbacks import callbacks
 import pytorch_lightning as pl
 from pytorch_lightning.utilities.model_summary import ModelSummary
 from pytorch_lightning.loggers import WandbLogger
+import shutil
+import os
 
 
 def main():
     pl.seed_everything(123)
-    dataset = BallroomDataset(root="data/ballroom", render=False)
+    dataset = BallroomDataset(root="data/ballroom", render=True)
     datamodule = BallroomDatamodule(
         dataset,
-        root="data/ballroom",
-        batch_size=32,
+        batch_size=1,
         num_workers=0,
         pin_memory=True,
         persistent_workers=True,
     )
 
     logger = WandbLogger(project="beattrack", entity="mattricesound", save_dir=".")
-    callbacks = []
-    model_checkpoint = pl.callbacks.ModelCheckpoint(
-        monitor="valid_loss",
-        save_top_k=1,
-        save_last=True,
-        mode="min",
-        verbose=False,
-        dirpath="./ckpts2/",
-        filename="{epoch:02d}-{valid_loss:.3f}",
-    )
-    callbacks.append(model_checkpoint)
+    if os.path.exists("./ckpts") and os.path.isdir("./ckpts"):
+        shutil.rmtree("./ckpts")
+
     model = BeatNet()
     trainer = pl.Trainer(
-        max_epochs=10, logger=logger, log_every_n_steps=1, callbacks=callbacks
+        max_epochs=50, logger=logger, log_every_n_steps=1, callbacks=callbacks
     )
     summary = ModelSummary(model)
     print(summary)
     trainer.fit(model, datamodule)
+    trainer.test(model, datamodule, ckpt_path="best")
 
 
 if __name__ == "__main__":

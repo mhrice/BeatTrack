@@ -27,6 +27,9 @@ class BallroomDataset(Dataset):
         self.input_root = self.root / "inputs"
         self.input_root.mkdir(exist_ok=True)
         print("Found {} audio files".format(len(self.audio_files)))
+        self.resample = torchaudio.transforms.Resample(
+            orig_freq=44100, new_freq=sample_rate
+        )
         self.mel_spec = MelSpectrogram(
             sample_rate=sample_rate,
             n_fft=n_fft,
@@ -40,6 +43,7 @@ class BallroomDataset(Dataset):
         total = 0
         for i, f in enumerate(tqdm(self.audio_files)):
             audio, sr = torchaudio.load(f)
+            audio = self.resample(audio)
             # Pad or trim to 30 seconds
             if audio.shape[1] < data_length:
                 audio = F.pad(audio, (0, data_length - audio.shape[1]))
@@ -53,6 +57,7 @@ class BallroomDataset(Dataset):
             label = label2vec(label_file, hop_size, frames)
             torch.save(mel, self.input_root / f"{i}_mel.pt")
             torch.save(label, self.input_root / f"{i}_lab.pt")
+            torch.save(f, self.input_root / f"{i}_path.pt")
             self.total = total
 
     def __len__(self):
@@ -64,13 +69,21 @@ class BallroomDataset(Dataset):
         return mel.unsqueeze(0), label
 
 
-def label2vec(label_file: Path, hop_size: int, num_frames: int) -> torch.Tensor:
+def label2vec(
+    label_file: Path, hop_size: int, num_frames: int, widen_length: int = 2
+) -> torch.Tensor:
     labels = [0] * num_frames
     for line in label_file.open("r"):
         time, beat_num = line.split(" ")
         frame_id = round(float(time) * sample_rate / hop_size)
         if frame_id < num_frames:
             labels[frame_id] = 1
+            # Add 0.5 to the left and right of the label
+            for i in range(1, widen_length + 1):
+                if frame_id - i > 0:
+                    labels[frame_id - i] = 0.5
+                if frame_id + i < len(labels) - 1:
+                    labels[frame_id + i] = 0.5
     return torch.tensor(labels)
 
 
@@ -78,7 +91,6 @@ class BallroomDatamodule(pl.LightningDataModule):
     def __init__(
         self,
         dataset,
-        root: str,
         batch_size: int,
         num_workers: int,
         pin_memory: bool = False,
@@ -89,7 +101,6 @@ class BallroomDatamodule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
-        self.root = Path(root)
 
     def setup(self, stage: Any = None) -> None:
         train_split = 0.8
