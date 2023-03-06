@@ -8,15 +8,20 @@ import shutil
 import os
 import torch
 from cfg import cpu_cfg, gpu_cfg
+import argparse
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Train BeatTCN")
+    parser.add_argument("--skip_render", action="store_true", default=False)
+    args = parser.parse_args()
+
     if torch.cuda.is_available():
         cfg = gpu_cfg
     else:
         cfg = cpu_cfg
     pl.seed_everything(123)
-    dataset = BallroomDataset(root="data", render=True)
+    dataset = BallroomDataset(root="data", render=not args.skip_render)
     datamodule = BallroomDatamodule(
         dataset,
         batch_size=cfg["batch_size"],
