@@ -93,6 +93,8 @@ class ConvBlock(nn.Module):
         )
         self.dropout1 = nn.Dropout(p=0.1)
         self.maxpool1 = nn.MaxPool2d(kernel_size=(1, 3))
+        self.elu1 = nn.ELU()
+
         self.conv2 = nn.Conv2d(
             in_channels=16,
             out_channels=16,
@@ -101,26 +103,29 @@ class ConvBlock(nn.Module):
         )
         self.dropout2 = nn.Dropout(p=0.1)
         self.maxpool2 = nn.MaxPool2d(kernel_size=(1, 3))
+        self.elu2 = nn.ELU()
+
         self.conv3 = nn.Conv2d(
             in_channels=16,
             out_channels=16,
             kernel_size=(1, 8),
         )
         self.dropout3 = nn.Dropout(p=0.1)
+        self.elu3 = nn.ELU()
 
     def forward(self, x):
         x = self.conv1(x)
-        x = F.elu(x)
-        x = self.maxpool1(x)
+        x = self.elu1(x)
         x = self.dropout1(x)
-
+        x = self.maxpool1(x)
         x = self.conv2(x)
-        x = F.elu(x)
-        x = self.maxpool2(x)
+        x = self.elu2(x)
         x = self.dropout2(x)
-
+        x = self.maxpool2(x)
         x = self.conv3(x)
-        x = F.elu(x)
+        x = self.elu(x)
+        x = self.dropout(x)
+        x = self.elu3(x)
         x = self.dropout3(x)
         return x
 
