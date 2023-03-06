@@ -36,11 +36,17 @@ def main():
         shutil.rmtree("./ckpts")
 
     model = BeatTCN()
+    if cfg["gpu"]:
+        accelerator = "gpu"
+    else:
+        accelerator = None
     trainer = pl.Trainer(
         max_epochs=cfg["max_epochs"],
         logger=logger,
         log_every_n_steps=1,
         callbacks=callbacks,
+        accelerator=accelerator,
+        num_devices=1,
     )
     trainer.fit(model, datamodule)
     trainer.test(model, datamodule, ckpt_path="best")
