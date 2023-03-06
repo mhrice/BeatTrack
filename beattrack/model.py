@@ -13,7 +13,7 @@ class BeatTCN(pl.LightningModule):
         super().__init__()
         num_filters = 20
         num_tcn_blocks = 11
-        self.conv_block = ConvBlock(num_filters=self.num_filters)
+        self.conv_block = ConvBlock(num_filters=num_filters)
         self.tcn = TCN(num_blocks=num_tcn_blocks, num_filters=num_filters)
         self.linear = nn.Linear(1, 2)  # Split into beat, downbeat
         self.sigmoid = nn.Sigmoid()
