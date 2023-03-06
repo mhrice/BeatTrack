@@ -22,7 +22,7 @@ def eval(model: torch.nn.Module, test_data: torch.Tensor):
     with torch.no_grad():
         beats = model(mel)
     for beats, label in zip(beats, label):
-        beat_times = dbn(beats.view(-1))
+        beat_times = dbn(beats.cpu().view(-1))
 
         gt_times = []
         for i, lab in enumerate(label):

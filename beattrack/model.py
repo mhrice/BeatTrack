@@ -123,8 +123,6 @@ class ConvBlock(nn.Module):
         x = self.dropout2(x)
         x = self.maxpool2(x)
         x = self.conv3(x)
-        x = self.elu(x)
-        x = self.dropout(x)
         x = self.elu3(x)
         x = self.dropout3(x)
         return x

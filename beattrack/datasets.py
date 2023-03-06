@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torchaudio
-from torchaudio.transforms import MelSpectrogram
+from torchaudio.transforms import MelSpectrogram, Resample
 import torch.nn.functional as F
 from pathlib import Path
 import pytorch_lightning as pl
@@ -30,9 +30,7 @@ class BallroomDataset(Dataset):
         self.input_root = self.root / "inputs"
         self.input_root.mkdir(exist_ok=True)
         print("Found {} audio files".format(len(self.audio_files)))
-        self.resample = torchaudio.transforms.Resample(
-            orig_freq=44100, new_freq=sample_rate
-        )
+        self.resample = Resample(orig_freq=44100, new_freq=sample_rate)
         self.mel_spec = MelSpectrogram(
             sample_rate=sample_rate,
             n_fft=n_fft,
