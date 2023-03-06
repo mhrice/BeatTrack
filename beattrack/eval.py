@@ -7,7 +7,12 @@ sample_rate = 44100
 hop_size = round(sample_rate / 100)  # 10ms hop size
 
 
-def eval(batch: torch.Tensor, beat_preds: torch.Tensor, downbeat_preds: torch.Tensor):
+def eval(
+    batch: torch.Tensor,
+    beat_preds: torch.Tensor,
+    downbeat_preds: torch.Tensor,
+    mode: str,
+):
     beat_dbn = DBNBeatTrackingProcessor(
         min_bpm=55, max_bpm=215, transition_labmda=100, fps=100
     )
@@ -60,6 +65,11 @@ def eval(batch: torch.Tensor, beat_preds: torch.Tensor, downbeat_preds: torch.Te
         downbeat_amlc.append(downbeat_evaluation["Any Metric Level Continuous"])
         downbeat_amlt.append(downbeat_evaluation["Any Metric Level Total"])
         downbeat_d.append(downbeat_evaluation["Information gain"])
+
+        # Only log first of batch
+        if mode == "valid":
+            break
+
     return {
         "Beat F-measure": np.mean(beat_f_mes),
         "Downbeat F-measure": np.mean(downbeat_f_mes),
