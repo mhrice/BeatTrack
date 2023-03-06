@@ -12,7 +12,9 @@ import torch
 
 def main():
     if torch.cuda.is_available():
-        cfg = yaml.load(open("config.yaml", "r"), Loader=yaml.FullLoader)
+        cfg = yaml.load(open("cfg_gpu.yaml", "r"), Loader=yaml.FullLoader)
+    else:
+        cfg = yaml.load(open("cfg.yaml", "r"), Loader=yaml.FullLoader)
     pl.seed_everything(123)
     dataset = BallroomDataset(root="data", render=True)
     datamodule = BallroomDatamodule(
