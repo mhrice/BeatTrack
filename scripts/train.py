@@ -6,15 +6,15 @@ from pytorch_lightning.utilities.model_summary import ModelSummary
 from pytorch_lightning.loggers import WandbLogger
 import shutil
 import os
-import yaml
 import torch
+from cfg import cpu_cfg, gpu_cfg
 
 
 def main():
     if torch.cuda.is_available():
-        cfg = yaml.load(open("cfg_gpu.yaml", "r"), Loader=yaml.FullLoader)
+        cfg = gpu_cfg
     else:
-        cfg = yaml.load(open("cfg.yaml", "r"), Loader=yaml.FullLoader)
+        cfg = cpu_cfg
     pl.seed_everything(123)
     dataset = BallroomDataset(root="data", render=True)
     datamodule = BallroomDatamodule(

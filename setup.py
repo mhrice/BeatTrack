@@ -48,7 +48,6 @@ setup(
         "madmom",
         "mir_eval",
         "audiomentations",
-        "PyYAML",
     ],
     include_package_data=True,
     license="Apache License 2.0",
