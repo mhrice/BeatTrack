@@ -12,7 +12,7 @@ model_checkpoint = pl.callbacks.ModelCheckpoint(
 )
 learning_rate_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step")
 early_stop_callback = pl.callbacks.EarlyStopping(
-    monitor="valid_loss", min_delta=0.00, patience=50, verbose=False, mode="max"
+    monitor="valid_loss", min_delta=0.00, patience=55, verbose=False, mode="max"
 )
 
 callbacks = [model_checkpoint, learning_rate_monitor, early_stop_callback]

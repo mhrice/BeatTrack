@@ -56,9 +56,10 @@ class BallroomDataset(Dataset):
             # mel = spectral_augment(mel)
 
             label_file = self.label_root / f"{f.stem}.beats"
-            label = label2vec(label_file, hop_size, frames)
+            beats, downbeats = label2vec(label_file, hop_size, frames)
             torch.save(mel, self.input_root / f"{i}_mel.pt")
-            torch.save(label, self.input_root / f"{i}_lab.pt")
+            torch.save(beats, self.input_root / f"{i}_beats.pt")
+            torch.save(downbeats, self.input_root / f"{i}_downbeats.pt")
             torch.save(f, self.input_root / f"{i}_path.pt")
             self.total = total
 
@@ -67,27 +68,36 @@ class BallroomDataset(Dataset):
 
     def __getitem__(self, idx: int):
         mel = torch.load(self.input_root / f"{idx}_mel.pt")
-        label = torch.load(self.input_root / f"{idx}_lab.pt")
-        return mel.unsqueeze(0), label
+        beats = torch.load(self.input_root / f"{idx}_beats.pt")
+        downbeats = torch.load(self.input_root / f"{idx}_downbeats.pt")
+        return mel.unsqueeze(0), beats, downbeats
 
 
 def label2vec(
     label_file: Path, hop_size: int, num_frames: int, widen_length: int = 2
 ) -> torch.Tensor:
-    labels = [0] * num_frames
+    beats = [0] * num_frames
+    downbeats = [0] * num_frames
     for line in label_file.open("r"):
         # Fix for file that has tab instead of space
         time, beat_num = line.replace("\t", " ").split(" ")
         frame_id = round(float(time) * sample_rate / hop_size)
         if frame_id < num_frames:
-            labels[frame_id] = 1
+            beats[frame_id] = 1
+            if beat_num.strip() == "1":
+                downbeats[frame_id] = 1
             # Add 0.5 to the left and right of the label
             for i in range(1, widen_length + 1):
                 if frame_id - i > 0:
-                    labels[frame_id - i] = 0.5
-                if frame_id + i < len(labels) - 1:
-                    labels[frame_id + i] = 0.5
-    return torch.tensor(labels)
+                    beats[frame_id - i] = 0.5
+                    if beat_num.strip() == "1":
+                        downbeats[frame_id - i] = 0.5
+                if frame_id + i < len(beats) - 1:
+                    beats[frame_id + i] = 0.5
+                    if beat_num.strip() == "1":
+                        downbeats[frame_id + i] = 0.5
+
+    return torch.Tensor(beats), torch.Tensor(downbeats)
 
 
 class BallroomDatamodule(pl.LightningDataModule):

@@ -5,14 +5,18 @@ from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 from beattrack.eval import eval
 
+SONG_LEN = 30  # 30 seconds of audio
+
 
 class BeatTCN(pl.LightningModule):
     def __init__(
         self,
     ):
         super().__init__()
+        len_linear = SONG_LEN / 0.01 + 1  # 10ms hop size
         self.conv_block = ConvBlock()
         self.tcn = TCN(n_blocks=11)
+        self.linear = nn.Linear(1, 2)
         self.sigmoid = nn.Sigmoid()
         self.loss = nn.BCELoss()
 
@@ -21,7 +25,10 @@ class BeatTCN(pl.LightningModule):
         # Remove last dimension
         x = x.view(-1, x.shape[1], x.shape[2])
         x = self.tcn(x)
+        x = x.view(-1, 1)
+        x = self.linear(x)
         x = self.sigmoid(x)
+        x = x.view(2, -1)
         return x
 
     def configure_optimizers(self):
@@ -38,32 +45,38 @@ class BeatTCN(pl.LightningModule):
         }
 
     def training_step(self, batch, batch_idx):
-        loss = self.common_step(batch, batch_idx, mode="train")
+        loss, _, _ = self.common_step(batch, batch_idx, mode="train")
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss = self.common_step(batch, batch_idx, mode="valid")
+        loss, beat_preds, downbeat_preds = self.common_step(
+            batch, batch_idx, mode="valid"
+        )
         with torch.no_grad():
-            metrics = eval(self, batch)
+            metrics = eval(batch, beat_preds, downbeat_preds)
             for metric, value in metrics.items():
                 self.log(f"valid_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
     def test_step(self, batch, batch_idx):
-        loss = self.common_step(batch, batch_idx, mode="test")
+        loss, beat_preds, downbeat_preds = self.common_step(
+            batch, batch_idx, mode="test"
+        )
         with torch.no_grad():
-            metrics = eval(self, batch)
+            metrics = eval(batch, beat_preds, downbeat_preds)
             for metric, value in metrics.items():
                 self.log(f"test_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
     def common_step(self, batch, batch_idx, mode: str = "train"):
-        specs, labels = batch
+        specs, beats, downbeats = batch
         preds = self(specs)
-        loss = self.loss(preds.squeeze(1), labels)
+        beat_preds, downbeat_preds = preds.split(1, dim=0)
+        beat_loss = self.loss(beat_preds, beats)
+        downbeat_loss = self.loss(downbeat_preds, downbeats)
+        loss = beat_loss + downbeat_loss
         self.log(f"{mode}_loss", loss)
-
-        return loss
+        return loss, beat_preds, downbeat_preds
 
 
 def mean_false_error(preds, labels):

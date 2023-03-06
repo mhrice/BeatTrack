@@ -7,40 +7,70 @@ sample_rate = 44100
 hop_size = round(sample_rate / 100)  # 10ms hop size
 
 
-def eval(model: torch.nn.Module, test_data: torch.Tensor):
-    dbn = DBNBeatTrackingProcessor(
+def eval(batch: torch.Tensor, beat_preds: torch.Tensor, downbeat_preds: torch.Tensor):
+    beat_dbn = DBNBeatTrackingProcessor(
         min_bpm=55, max_bpm=215, transition_labmda=100, fps=100
     )
-    f_mes = []
-    cmlc = []
-    cmlt = []
-    amlc = []
-    amlt = []
-    d = []
+    downbeat_dbn = DBNBeatTrackingProcessor(
+        min_bpm=15, max_bpm=80, transition_labmda=100, fps=100
+    )
+    beat_f_mes = []
+    downbeat_f_mes = []
+    beat_cmlc = []
+    downbeat_cmlc = []
+    beat_cmlt = []
+    downbeat_cmlt = []
+    beat_amlc = []
+    downbeat_amlc = []
+    beat_amlt = []
+    downbeat_amlt = []
+    beat_d = []
+    downbeat_d = []
 
-    mel, label = test_data
-    with torch.no_grad():
-        beats = model(mel)
-    for beats, label in zip(beats, label):
-        beat_times = dbn(beats.cpu().view(-1))
+    mel, beat_label, downbeat_label = batch
 
-        gt_times = []
-        for i, lab in enumerate(label):
+    for beats, downbeats, bl, dl in zip(
+        beat_preds, downbeat_preds, beat_label, downbeat_label
+    ):
+        beat_times = beat_dbn(beats.cpu().view(-1))
+        downbeat_times = downbeat_dbn(downbeats.cpu().view(-1))
+
+        beat_gt_times = []
+        downbeat_gt_times = []
+        for i, lab in enumerate(bl):
             if lab == 1:
-                gt_times.append(i * hop_size / sample_rate)
-        gt_times = np.array(gt_times)
-        eval = mir_eval.beat.evaluate(gt_times, beat_times)
-        f_mes.append(eval["F-measure"])
-        cmlc.append(eval["Correct Metric Level Continuous"])
-        cmlt.append(eval["Correct Metric Level Total"])
-        amlc.append(eval["Any Metric Level Continuous"])
-        amlt.append(eval["Any Metric Level Total"])
-        d.append(eval["Information gain"])
+                beat_gt_times.append(i * hop_size / sample_rate)
+        for i, lab in enumerate(dl):
+            if lab == 1:
+                downbeat_gt_times.append(i * hop_size / sample_rate)
+        beat_gt_times = np.array(beat_gt_times)
+        downbeat_gt_times = np.array(downbeat_gt_times)
+        beat_evaluation = mir_eval.beat.evaluate(beat_gt_times, beat_times)
+        downbeat_evaluation = mir_eval.beat.evaluate(downbeat_gt_times, downbeat_times)
+        beat_f_mes.append(beat_evaluation["F-measure"])
+        beat_cmlc.append(beat_evaluation["Correct Metric Level Continuous"])
+        beat_cmlt.append(beat_evaluation["Correct Metric Level Total"])
+        beat_amlc.append(beat_evaluation["Any Metric Level Continuous"])
+        beat_amlt.append(beat_evaluation["Any Metric Level Total"])
+        beat_d.append(beat_evaluation["Information gain"])
+
+        downbeat_f_mes.append(downbeat_evaluation["F-measure"])
+        downbeat_cmlc.append(downbeat_evaluation["Correct Metric Level Continuous"])
+        downbeat_cmlt.append(downbeat_evaluation["Correct Metric Level Total"])
+        downbeat_amlc.append(downbeat_evaluation["Any Metric Level Continuous"])
+        downbeat_amlt.append(downbeat_evaluation["Any Metric Level Total"])
+        downbeat_d.append(downbeat_evaluation["Information gain"])
     return {
-        "F-measure": np.mean(f_mes),
-        "Correct Metric Level Continuous": np.mean(cmlc),
-        "Correct Metric Level Total": np.mean(cmlt),
-        "Any Metric Level Continuous": np.mean(amlc),
-        "Any Metric Level Total": np.mean(amlt),
-        "Information gain": np.mean(d),
+        "Beat F-measure": np.mean(beat_f_mes),
+        "Downbeat F-measure": np.mean(downbeat_f_mes),
+        "Beat Correct Metric Level Continuous": np.mean(beat_cmlc),
+        "Downbeat Correct Metric Level Continuous": np.mean(downbeat_cmlc),
+        "Beat Correct Metric Level Total": np.mean(beat_cmlt),
+        "Downbeat Correct Metric Level Total": np.mean(downbeat_cmlt),
+        "Beat Any Metric Level Continuous": np.mean(beat_amlc),
+        "Downbeat Any Metric Level Continuous": np.mean(downbeat_amlc),
+        "Beat Any Metric Level Total": np.mean(beat_amlt),
+        "Downbeat Any Metric Level Total": np.mean(downbeat_amlt),
+        "Beat Information gain": np.mean(beat_d),
+        "Downbeat Information gain": np.mean(downbeat_d),
     }
