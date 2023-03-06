@@ -72,10 +72,6 @@ class BeatTCN(pl.LightningModule):
         )
         return {
             "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "valid_loss",
-            },
         }
 
 
