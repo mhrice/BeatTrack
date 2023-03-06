@@ -50,7 +50,7 @@ class BeatTCN(pl.LightningModule):
             batch, batch_idx, mode="valid"
         )
         with torch.no_grad():
-            metrics = eval(batch, beat_preds, downbeat_preds)
+            metrics = eval(batch, beat_preds, downbeat_preds, mode="valid")
             for metric, value in metrics.items():
                 self.log(f"valid_{metric}", value, on_step=False, on_epoch=True)
         return loss
@@ -60,7 +60,7 @@ class BeatTCN(pl.LightningModule):
             batch, batch_idx, mode="test"
         )
         with torch.no_grad():
-            metrics = eval(batch, beat_preds, downbeat_preds)
+            metrics = eval(batch, beat_preds, downbeat_preds, mode="test")
             for metric, value in metrics.items():
                 self.log(f"test_{metric}", value, on_step=False, on_epoch=True)
         return loss
