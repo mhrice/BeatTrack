@@ -19,20 +19,20 @@ def main():
     dataset = BallroomDataset(root="data", render=True)
     datamodule = BallroomDatamodule(
         dataset,
-        batch_size=cfg.batch_size,
-        num_workers=cfg.num_workers,
+        batch_size=cfg["batch_size"],
+        num_workers=cfg["num_workers"],
         pin_memory=True,
         persistent_workers=True,
     )
     logger = None
-    if cfg.wandb:
+    if cfg["wandb"]:
         logger = WandbLogger(project="beattrack", entity="mattricesound", save_dir=".")
     if os.path.exists("./ckpts") and os.path.isdir("./ckpts"):
         shutil.rmtree("./ckpts")
 
     model = BeatTCN()
     trainer = pl.Trainer(
-        max_epochs=cfg.max_epochs,
+        max_epochs=cfg["max_epochs"],
         logger=logger,
         log_every_n_steps=1,
         callbacks=callbacks,
