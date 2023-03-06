@@ -3,6 +3,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 from torch.nn.utils import weight_norm
 import torch.nn.functional as F
+from beattrack.eval import eval
 
 
 class BeatTCN(pl.LightningModule):
@@ -55,6 +56,12 @@ class BeatTCN(pl.LightningModule):
         self.log(f"{mode}_loss", loss)
 
         return loss
+
+    def on_test_epoch_end(self) -> None:
+        metrics = eval(self, self.test_dataloader())
+        for key in metrics:
+            self.log(key, metrics[key])
+            print(f"{key}: {metrics[key]}")
 
 
 def mean_false_error(preds, labels):

@@ -1,4 +1,4 @@
-from beattrack.model import BeatNet
+from beattrack.model import BeatTCN
 import torchaudio
 from torchaudio.transforms import MelSpectrogram
 from pathlib import Path
@@ -27,7 +27,7 @@ mel_spec = MelSpectrogram(
 
 
 def main():
-    model = BeatNet.load_from_checkpoint("ckpts/last.ckpt")
+    model = BeatTCN.load_from_checkpoint("checkpoints/best.ckpt")
     model = model.eval()
 
     dbn = DBNBeatTrackingProcessor(

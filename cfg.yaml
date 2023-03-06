@@ -1,0 +1,4 @@
+batch_size: 16
+num_workers: 0
+wandb: False
+max_epochs: 50
