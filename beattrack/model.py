@@ -43,10 +43,18 @@ class BeatTCN(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         loss = self.common_step(batch, batch_idx, mode="valid")
+        with torch.no_grad():
+            metrics = eval(self, batch)
+            for metric, value in metrics.items():
+                self.log(f"valid_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
     def test_step(self, batch, batch_idx):
         loss = self.common_step(batch, batch_idx, mode="test")
+        with torch.no_grad():
+            metrics = eval(self, batch)
+            for metric, value in metrics.items():
+                self.log(f"test_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
     def common_step(self, batch, batch_idx, mode: str = "train"):
@@ -56,12 +64,6 @@ class BeatTCN(pl.LightningModule):
         self.log(f"{mode}_loss", loss)
 
         return loss
-
-    def on_test_epoch_end(self) -> None:
-        metrics = eval(self, self.test_dataloader())
-        for key in metrics:
-            self.log(key, metrics[key])
-            print(f"{key}: {metrics[key]}")
 
 
 def mean_false_error(preds, labels):

@@ -2,14 +2,12 @@ from madmom.features import DBNBeatTrackingProcessor
 import mir_eval
 import numpy as np
 import torch
-from pathlib import Path
-from tqdm import tqdm
 
 sample_rate = 44100
 hop_size = round(sample_rate / 100)  # 10ms hop size
 
 
-def eval(model: torch.nn.Module, test_dataset: torch.utils.data.Dataset):
+def eval(model: torch.nn.Module, test_data: torch.Tensor):
     dbn = DBNBeatTrackingProcessor(
         min_bpm=55, max_bpm=215, transition_labmda=100, fps=100
     )
@@ -20,7 +18,7 @@ def eval(model: torch.nn.Module, test_dataset: torch.utils.data.Dataset):
     amlt = []
     d = []
 
-    for mel, label in tqdm(test_dataset, total=len(test_dataset)):
+    for mel, label in test_data:
         mel = mel.unsqueeze(0).unsqueeze(0)
         with torch.no_grad():
             beats = model(mel)
