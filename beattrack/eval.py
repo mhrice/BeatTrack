@@ -18,10 +18,11 @@ def eval(model: torch.nn.Module, test_data: torch.Tensor):
     amlt = []
     d = []
 
-    for mel, label in test_data:
-        mel = mel.unsqueeze(0).unsqueeze(0)
-        with torch.no_grad():
-            beats = model(mel)
+    mel, label = test_data
+    mel = mel.unsqueeze(0)
+    with torch.no_grad():
+        beats = model(mel)
+    for beats, label in zip(beats, label):
         beat_times = dbn(beats.view(-1))
 
         gt_times = []
