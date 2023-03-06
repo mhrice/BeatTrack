@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 from beattrack.eval import eval
+from einops import rearrange
 
 
 class BeatTCN(pl.LightningModule):
@@ -24,7 +25,7 @@ class BeatTCN(pl.LightningModule):
         # Remove last dimension
         x = x.view(-1, x.shape[1], x.shape[2])
         x = self.tcn(x)
-        x = x.view(-1, 1)
+        x = rearrange(x, "b c t -> b t c")
         x = self.linear(x)
         x = self.sigmoid(x)
         x = x.view(2, -1)
