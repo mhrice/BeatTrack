@@ -8,7 +8,7 @@ cpu_cfg = {
 
 gpu_cfg = {
     "batch_size": 96,
-    "num_workers": 10,
+    "num_workers": 0,
     "wandb": True,
     "max_epochs": 1000,
     "gpu": True,

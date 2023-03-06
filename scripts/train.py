@@ -18,6 +18,7 @@ def main():
 
     if torch.cuda.is_available():
         cfg = gpu_cfg
+        torch.set_float32_matmul_precision("medium")
     else:
         cfg = cpu_cfg
     pl.seed_everything(123)
