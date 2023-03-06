@@ -28,21 +28,18 @@ class BeatTCN(pl.LightningModule):
         x = rearrange(x, "b c t -> b t c")
         x = self.linear(x)
         x = self.sigmoid(x)
-        x = x.view(2, -1)
+        x = rearrange(x, "b t c -> b c t")
         return x
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.2, patience=5, verbose=True
-        )
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "valid_loss",
-            },
-        }
+    def common_step(self, batch, batch_idx, mode: str = "train"):
+        specs, beats, downbeats = batch
+        preds = self(specs)
+        beat_preds, downbeat_preds = preds.split(1, dim=1)
+        beat_loss = self.loss(beat_preds.squeeze(1), beats)
+        downbeat_loss = self.loss(downbeat_preds.squeeze(1), downbeats)
+        loss = beat_loss + downbeat_loss
+        self.log(f"{mode}_loss", loss)
+        return loss, beat_preds, downbeat_preds
 
     def training_step(self, batch, batch_idx):
         loss, _, _ = self.common_step(batch, batch_idx, mode="train")
@@ -68,15 +65,18 @@ class BeatTCN(pl.LightningModule):
                 self.log(f"test_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
-    def common_step(self, batch, batch_idx, mode: str = "train"):
-        specs, beats, downbeats = batch
-        preds = self(specs)
-        beat_preds, downbeat_preds = preds.split(1, dim=0)
-        beat_loss = self.loss(beat_preds, beats)
-        downbeat_loss = self.loss(downbeat_preds, downbeats)
-        loss = beat_loss + downbeat_loss
-        self.log(f"{mode}_loss", loss)
-        return loss, beat_preds, downbeat_preds
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.2, patience=5, verbose=True
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "valid_loss",
+            },
+        }
 
 
 def mean_false_error(preds, labels):
