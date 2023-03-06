@@ -1,7 +1,7 @@
 cpu_cfg = {
     "batch_size": 1,
     "num_workers": 0,
-    "wandb": False,
+    "wandb": True,
     "max_epochs": 50,
     "gpu": False,
 }

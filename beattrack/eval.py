@@ -19,7 +19,6 @@ def eval(model: torch.nn.Module, test_data: torch.Tensor):
     d = []
 
     mel, label = test_data
-    mel = mel.unsqueeze(0)
     with torch.no_grad():
         beats = model(mel)
     for beats, label in zip(beats, label):

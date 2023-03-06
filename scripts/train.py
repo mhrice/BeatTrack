@@ -2,7 +2,6 @@ from beattrack.model import BeatTCN
 from beattrack.datasets import BallroomDataset, BallroomDatamodule
 from beattrack.callbacks import callbacks
 import pytorch_lightning as pl
-from pytorch_lightning.utilities.model_summary import ModelSummary
 from pytorch_lightning.loggers import WandbLogger
 import shutil
 import os
