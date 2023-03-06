@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from typing import Any, List
 from einops import rearrange
 from tqdm import tqdm
+from beattrack.data_aug import waveform_augment
 
 n_fft = 2048
 win_length = None
@@ -24,8 +25,6 @@ class BallroomDataset(Dataset):
         self.root = Path(root)
         self.audio_files = list(self.root.glob("**/*.wav"))
         self.label_root = self.root / "beats"
-        self.input_root = self.root / "inputs"
-        self.input_root.mkdir(exist_ok=True)
         print("Found {} audio files".format(len(self.audio_files)))
         self.resample = torchaudio.transforms.Resample(
             orig_freq=44100, new_freq=sample_rate
@@ -38,34 +37,30 @@ class BallroomDataset(Dataset):
             n_mels=n_mels,
         )
 
-        if not render:
-            return
-        total = 0
-        for i, f in enumerate(tqdm(self.audio_files)):
-            audio, sr = torchaudio.load(f)
-            audio = self.resample(audio)
-            # Pad or trim to 30 seconds
-            if audio.shape[1] < data_length:
-                audio = F.pad(audio, (0, data_length - audio.shape[1]))
-            else:
-                audio = audio[:, :data_length]
-            mel = self.mel_spec(audio)
-            channels, bins, frames = mel.shape
-            mel = rearrange(mel, "c b f -> f (b c)")
-
-            label_file = self.label_root / f"{f.stem}.beats"
-            label = label2vec(label_file, hop_size, frames)
-            torch.save(mel, self.input_root / f"{i}_mel.pt")
-            torch.save(label, self.input_root / f"{i}_lab.pt")
-            torch.save(f, self.input_root / f"{i}_path.pt")
-            self.total = total
-
     def __len__(self):
         return len(self.audio_files)
 
     def __getitem__(self, idx: int):
-        mel = torch.load(self.input_root / f"{idx}_mel.pt")
-        label = torch.load(self.input_root / f"{idx}_lab.pt")
+        audio, sr = torchaudio.load(self.audio_files[idx])
+        audio = self.resample(audio)
+        # Pad or trim to 30 seconds
+        if audio.shape[1] < data_length:
+            audio = F.pad(audio, (0, data_length - audio.shape[1]))
+        else:
+            audio = audio[:, :data_length]
+
+        # Augment
+        waveform = waveform_augment(
+            samples=audio.cpu().numpy(), sample_rate=sample_rate
+        )
+
+        mel = self.mel_spec(torch.from_numpy(waveform))
+        channels, bins, frames = mel.shape
+        mel = rearrange(mel, "c b f -> f (b c)")
+
+        label_file = self.label_root / f"{self.audio_files[idx].stem}.beats"
+        label = label2vec(label_file, hop_size, frames)
+
         return mel.unsqueeze(0), label
 
 

@@ -5,21 +5,21 @@ from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 
 
-class BeatNet(pl.LightningModule):
+class BeatTCN(pl.LightningModule):
     def __init__(
         self,
     ):
         super().__init__()
-        self.ConvBlock = ConvBlock()
-        self.TCN = TCN(n_blocks=11)
+        self.conv_block = ConvBlock()
+        self.tcn = TCN(n_blocks=11)
         self.sigmoid = nn.Sigmoid()
         self.loss = nn.BCELoss()
 
     def forward(self, x):
-        x = self.ConvBlock(x)  # b, 16, conv, 1
+        x = self.conv_block(x)  # b, 16, conv, 1
         # Remove last dimension
         x = x.view(-1, x.shape[1], x.shape[2])
-        x = self.TCN(x)
+        x = self.tcn(x)
         x = self.sigmoid(x)
         return x
 
@@ -82,7 +82,6 @@ class ConvBlock(nn.Module):
             kernel_size=(3, 3),
             padding=(1, 0),
         )
-        self.elu1 = nn.ELU()
         self.dropout1 = nn.Dropout(p=0.1)
         self.maxpool1 = nn.MaxPool2d(kernel_size=(1, 3))
         self.conv2 = nn.Conv2d(
@@ -91,7 +90,6 @@ class ConvBlock(nn.Module):
             kernel_size=(3, 3),
             padding=(1, 0),
         )
-        self.elu2 = nn.ELU()
         self.dropout2 = nn.Dropout(p=0.1)
         self.maxpool2 = nn.MaxPool2d(kernel_size=(1, 3))
         self.conv3 = nn.Conv2d(
@@ -99,20 +97,21 @@ class ConvBlock(nn.Module):
             out_channels=16,
             kernel_size=(1, 8),
         )
-        self.elu3 = nn.ELU()
         self.dropout3 = nn.Dropout(p=0.1)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.elu1(x)
-        x = self.dropout1(x)
+        x = F.elu(x)
         x = self.maxpool1(x)
+        x = self.dropout1(x)
+
         x = self.conv2(x)
-        x = self.elu2(x)
-        x = self.dropout2(x)
+        x = F.elu(x)
         x = self.maxpool2(x)
+        x = self.dropout2(x)
+
         x = self.conv3(x)
-        x = self.elu3(x)
+        x = F.elu(x)
         x = self.dropout3(x)
         return x
 
