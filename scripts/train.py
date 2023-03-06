@@ -46,7 +46,7 @@ def main():
         log_every_n_steps=1,
         callbacks=callbacks,
         accelerator=accelerator,
-        num_devices=1,
+        devices=1,
     )
     trainer.fit(model, datamodule)
     trainer.test(model, datamodule, ckpt_path="best")
