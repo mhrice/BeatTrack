@@ -55,7 +55,7 @@ class BallroomDataset(Dataset):
             mel = self.mel_spec(audio)
             channels, bins, frames = mel.shape
             mel = rearrange(mel, "c b f -> f (b c)")
-            mel = spectral_augment(mel)
+            # mel = spectral_augment(mel)
 
             label_file = self.label_root / f"{f.stem}.beats"
             label = label2vec(label_file, hop_size, frames)
