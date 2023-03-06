@@ -5,23 +5,22 @@ from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 from beattrack.eval import eval
 
-SONG_LEN = 30  # 30 seconds of audio
-
 
 class BeatTCN(pl.LightningModule):
     def __init__(
         self,
     ):
         super().__init__()
-        len_linear = SONG_LEN / 0.01 + 1  # 10ms hop size
-        self.conv_block = ConvBlock()
-        self.tcn = TCN(n_blocks=11)
-        self.linear = nn.Linear(1, 2)
+        num_filters = 20
+        num_tcn_blocks = 11
+        self.conv_block = ConvBlock(num_filters=self.num_filters)
+        self.tcn = TCN(num_blocks=num_tcn_blocks, num_filters=num_filters)
+        self.linear = nn.Linear(1, 2)  # Split into beat, downbeat
         self.sigmoid = nn.Sigmoid()
         self.loss = nn.BCELoss()
 
     def forward(self, x):
-        x = self.conv_block(x)  # b, 16, conv, 1
+        x = self.conv_block(x)  # b, 20, conv, 1
         # Remove last dimension
         x = x.view(-1, x.shape[1], x.shape[2])
         x = self.tcn(x)
@@ -96,11 +95,12 @@ def mean_false_error(preds, labels):
 class ConvBlock(nn.Module):
     def __init__(
         self,
+        num_filters=16,
     ):
         super().__init__()
         self.conv1 = nn.Conv2d(
             in_channels=1,
-            out_channels=16,
+            out_channels=num_filters,
             kernel_size=(3, 3),
             padding=(1, 0),
         )
@@ -109,8 +109,8 @@ class ConvBlock(nn.Module):
         self.elu1 = nn.ELU()
 
         self.conv2 = nn.Conv2d(
-            in_channels=16,
-            out_channels=16,
+            in_channels=num_filters,
+            out_channels=num_filters,
             kernel_size=(3, 3),
             padding=(1, 0),
         )
@@ -119,8 +119,8 @@ class ConvBlock(nn.Module):
         self.elu2 = nn.ELU()
 
         self.conv3 = nn.Conv2d(
-            in_channels=16,
-            out_channels=16,
+            in_channels=num_filters,
+            out_channels=num_filters,
             kernel_size=(1, 8),
         )
         self.dropout3 = nn.Dropout(p=0.1)
@@ -144,29 +144,31 @@ class ConvBlock(nn.Module):
 class TCN(nn.Module):
     def __init__(
         self,
-        n_blocks: int,
+        num_blocks: int,
+        num_filters: int = 16,
     ):
         super().__init__()
         # self.input_conv = nn.Conv1d()
         self.resblocks = nn.ModuleList(
             [
                 Resblock(
-                    in_channels=16,
+                    in_channels=num_filters,
                     kernel_size=5,
                     dilation=2**i,
                     dropout=0.1,
-                    num_filters=16,
+                    num_filters=num_filters,
                 )
-                for i in range(n_blocks)
+                for i in range(num_blocks)
             ]
         )
         self.activation1 = nn.ELU()
-        self.conv1 = nn.Conv1d(in_channels=16, out_channels=16, kernel_size=1)
+        self.conv1 = nn.Conv1d(
+            in_channels=num_filters, out_channels=num_filters, kernel_size=1
+        )
         self.activation2 = nn.ELU()
-        self.conv2 = nn.Conv1d(in_channels=16, out_channels=1, kernel_size=1)
+        self.conv2 = nn.Conv1d(in_channels=num_filters, out_channels=1, kernel_size=1)
 
     def forward(self, x):
-        # x = self.input_conv(x)
         for block in self.resblocks:
             x = block(x)
         x = self.activation1(x)
