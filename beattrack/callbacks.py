@@ -14,7 +14,7 @@ learning_rate_monitor = pl.callbacks.LearningRateMonitor(logging_interval="step"
 early_stop_callback = pl.callbacks.EarlyStopping(
     monitor="valid_loss",
     min_delta=0.01,
-    patience=100,
+    patience=75,
     mode="min",
     verbose=False,
 )

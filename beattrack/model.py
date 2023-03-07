@@ -92,7 +92,7 @@ def mean_false_error(preds, labels):
 class ConvBlock(nn.Module):
     def __init__(
         self,
-        num_filters=16,
+        num_filters: int = 16,
     ):
         super().__init__()
         self.conv1 = nn.Conv2d(
