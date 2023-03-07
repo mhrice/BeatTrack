@@ -68,7 +68,7 @@ class BeatTCN(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[150, 190], gamma=0.1, verbose=True
+            optimizer, milestones=[150, 190], gamma=0.1, verbose=False
         )
         return {
             "optimizer": optimizer,
