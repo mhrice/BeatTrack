@@ -68,7 +68,7 @@ class BeatTCN(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[150, 190], gamma=0.1, verbose=False
+            optimizer, milestones=[140, 170], gamma=0.1, verbose=True
         )
         return {
             "optimizer": optimizer,
@@ -132,10 +132,12 @@ class ConvBlock(nn.Module):
         x = self.elu1(x)
         x = self.dropout1(x)
         x = self.maxpool1(x)
+
         x = self.conv2(x)
         x = self.elu2(x)
         x = self.dropout2(x)
         x = self.maxpool2(x)
+
         x = self.conv3(x)
         x = self.elu3(x)
         x = self.dropout3(x)

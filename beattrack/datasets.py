@@ -8,7 +8,6 @@ import pytorch_lightning as pl
 from typing import Any, List
 from einops import rearrange
 from tqdm import tqdm
-from beattrack.data_aug import spectral_augment
 
 n_fft = 2048
 win_length = None
@@ -41,7 +40,6 @@ class BallroomDataset(Dataset):
 
         if not render:
             return
-        total = 0
         for i, f in enumerate(tqdm(self.audio_files)):
             audio, sr = torchaudio.load(f)
             audio = self.resample(audio)
@@ -53,7 +51,6 @@ class BallroomDataset(Dataset):
             mel = self.mel_spec(audio)
             channels, bins, frames = mel.shape
             mel = rearrange(mel, "c b f -> f (b c)")
-            # mel = spectral_augment(mel)
 
             label_file = self.label_root / f"{f.stem}.beats"
             beats, downbeats = label2vec(label_file, hop_size, frames)
@@ -61,7 +58,6 @@ class BallroomDataset(Dataset):
             torch.save(beats, self.input_root / f"{i}_beats.pt")
             torch.save(downbeats, self.input_root / f"{i}_downbeats.pt")
             torch.save(f, self.input_root / f"{i}_path.pt")
-            self.total = total
 
     def __len__(self):
         return len(self.audio_files)
