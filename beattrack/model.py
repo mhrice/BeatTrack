@@ -67,11 +67,15 @@ class BeatTCN(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.2, patience=5, verbose=True
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=[150, 190], gamma=0.1, verbose=True
         )
         return {
             "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "valid_loss",
+            },
         }
 
 
