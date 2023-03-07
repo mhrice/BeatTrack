@@ -7,11 +7,13 @@ A pytorch-lightning implementation of TCN-based Joint Beat and Downbeat Tracking
 2. `cd BeatTrack`
 1. `python3 -m venv env`
 2. `source env/bin/activate`
-3. `pip install cython`
+3. `pip install cython numpy`
 4. `pip install -e .`
 
-## Fix Madmom issue
-In newer versions of python, madmom has an issue with the `processors.py` file. To fix this, run the following commands:
+Need a 2 stage pip install because of madmom issues
+
+## Fix Other Madmom issue
+In newer versions of python, madmom has an issue with the `processors.py` file. To fix this, run the following command, replacing `{python-version}` with your python version:
 `cp processors.py env/lib/{python-version}/site-packages/madmom/processors.py`
 
 ## Download Ballroom Dataset (not needed for inference)
