@@ -8,14 +8,7 @@ import pytorch_lightning as pl
 from typing import Any, List
 from einops import rearrange
 from tqdm import tqdm
-
-n_fft = 2048
-win_length = None
-sample_rate = 44100
-hop_size = round(sample_rate / 100)  # 10ms hop size
-n_mels = 81
-window = torch.hann_window(n_fft)
-data_length = 30 * sample_rate  # 30 seconds of audio
+from cfg import spec, sample_rate, data_length
 
 
 class BallroomDataset(Dataset):
@@ -29,13 +22,14 @@ class BallroomDataset(Dataset):
         self.input_root = self.root / "inputs"
         self.input_root.mkdir(exist_ok=True)
         print("Found {} audio files".format(len(self.audio_files)))
+        # Ballfroom dataset is 44100Hz
         self.resample = Resample(orig_freq=44100, new_freq=sample_rate)
         self.mel_spec = MelSpectrogram(
             sample_rate=sample_rate,
-            n_fft=n_fft,
-            hop_length=hop_size,
-            win_length=win_length,
-            n_mels=n_mels,
+            n_fft=spec["n_fft"],
+            hop_length=spec["hop_size"],
+            win_length=spec["win_length"],
+            n_mels=spec["n_mels"],
         )
 
         if not render:
@@ -53,7 +47,7 @@ class BallroomDataset(Dataset):
             mel = rearrange(mel, "c b f -> f (b c)")
 
             label_file = self.label_root / f"{f.stem}.beats"
-            beats, downbeats = label2vec(label_file, hop_size, frames)
+            beats, downbeats = label2vec(label_file, spec["hop_size"], frames)
             torch.save(mel, self.input_root / f"{i}_mel.pt")
             torch.save(beats, self.input_root / f"{i}_beats.pt")
             torch.save(downbeats, self.input_root / f"{i}_downbeats.pt")
@@ -77,7 +71,7 @@ def label2vec(
     for line in label_file.open("r"):
         # Fix for file that has tab instead of space
         time, beat_num = line.replace("\t", " ").split(" ")
-        frame_id = round(float(time) * sample_rate / hop_size)
+        frame_id = round(float(time) * sample_rate / spec["hop_size"])
         if frame_id < num_frames:
             beats[frame_id] = 1
             if beat_num.strip() == "1":

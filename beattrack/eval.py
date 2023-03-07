@@ -2,9 +2,7 @@ from madmom.features import DBNBeatTrackingProcessor
 import mir_eval
 import numpy as np
 import torch
-
-sample_rate = 44100
-hop_size = round(sample_rate / 100)  # 10ms hop size
+from cfg import sample_rate, spec
 
 
 def eval(
@@ -44,10 +42,10 @@ def eval(
         downbeat_gt_times = []
         for i, lab in enumerate(bl):
             if lab == 1:
-                beat_gt_times.append(i * hop_size / sample_rate)
+                beat_gt_times.append(i * spec["hop_size"] / sample_rate)
         for i, lab in enumerate(dl):
             if lab == 1:
-                downbeat_gt_times.append(i * hop_size / sample_rate)
+                downbeat_gt_times.append(i * spec["hop_size"] / sample_rate)
         beat_gt_times = np.array(beat_gt_times)
         downbeat_gt_times = np.array(downbeat_gt_times)
         beat_evaluation = mir_eval.beat.evaluate(beat_gt_times, beat_times)
