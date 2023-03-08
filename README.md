@@ -26,6 +26,7 @@ In newer versions of python, madmom has an issue with the `processors.py` file. 
 
 # Training
 `python scripts/train.py`
+Important: Change wandb logger settings to your own account.
 
 # Inference
 `python scripts/inference.py audio_file_path {checkpoint_path}`
