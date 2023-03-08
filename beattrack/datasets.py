@@ -71,7 +71,7 @@ def label2vec(
     for line in label_file.open("r"):
         # Fix for file that has tab instead of space
         time, beat_num = line.replace("\t", " ").split(" ")
-        frame_id = round(float(time) * sample_rate / spec["hop_size"])
+        frame_id = round(float(time) * sample_rate / hop_size)
         if frame_id < num_frames:
             beats[frame_id] = 1
             if beat_num.strip() == "1":
