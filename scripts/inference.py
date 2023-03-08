@@ -18,10 +18,10 @@ mel_spec = MelSpectrogram(
     n_mels=spec["n_mels"],
 )
 beat_dbn = DBNBeatTrackingProcessor(
-    min_bpm=55, max_bpm=215, transition_labmda=100, fps=100
+    min_bpm=55, max_bpm=215, transition_lambda=100, fps=100
 )
 downbeat_dbn = DBNBeatTrackingProcessor(
-    min_bpm=15, max_bpm=80, transition_labmda=100, fps=100
+    min_bpm=15, max_bpm=80, transition_lambda=100, fps=100
 )
 model = BeatTCN.load_from_checkpoint("checkpoints/best.ckpt")
 model.eval()

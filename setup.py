@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 NAME = "beattrack"
 DESCRIPTION = ""
-URL = ""
+URL = "https://github.com/mhrice/BeatTrack"
 EMAIL = "m.rice@se22.qmul.ac.uk"
 AUTHOR = "Matthew Rice"
 REQUIRES_PYTHON = ">=3.8.0"
@@ -50,7 +50,7 @@ setup(
         "audiomentations",
     ],
     include_package_data=True,
-    license="Apache License 2.0",
+    license="MIT License",
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Multimedia :: Sound/Audio",

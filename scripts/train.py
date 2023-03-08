@@ -15,12 +15,14 @@ def main():
     parser.add_argument("--skip_render", action="store_true", default=False)
     args = parser.parse_args()
 
+    # Use GPU config if available
     if torch.cuda.is_available():
         cfg = gpu_cfg
         torch.set_float32_matmul_precision("medium")
     else:
         cfg = cpu_cfg
     pl.seed_everything(123)
+    # Load Datamodule
     dataset = BallroomDataset(root="data", render=not args.skip_render)
     datamodule = BallroomDatamodule(
         dataset,
@@ -29,6 +31,7 @@ def main():
         pin_memory=True,
         persistent_workers=True,
     )
+    # Create Logger
     logger = None
     if cfg["wandb"]:
         logger = WandbLogger(project="beattrack", entity="mattricesound", save_dir=".")
@@ -40,6 +43,7 @@ def main():
         accelerator = "gpu"
     else:
         accelerator = None
+    # Create trainer
     trainer = pl.Trainer(
         max_epochs=cfg["max_epochs"],
         logger=logger,
@@ -48,6 +52,7 @@ def main():
         accelerator=accelerator,
         devices=1,
     )
+    # Train
     trainer.fit(model, datamodule)
     trainer.test(model, datamodule, ckpt_path="best")
 
